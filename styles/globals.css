@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 20 14.3% 4.1%;
+    --primary: 336 100% 57%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 340 30% 96%;
+    --muted-foreground: 340 10% 45%;
+    --border: 340 20% 90%;
+    --radius: 0.75rem;
+  }
+  * { box-sizing: border-box; border-color: hsl(var(--border)); }
+  body { @apply bg-white text-gray-900 font-sans antialiased; }
+}
+
+@layer components {
+  .btn-flora {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-semibold text-white transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed;
+    background: linear-gradient(135deg, #ec4899, #db2777);
+    box-shadow: 0 4px 15px rgba(236,72,153,0.4);
+  }
+  .btn-flora:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(236,72,153,0.5); }
+  .btn-outline-flora {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-semibold border-2 border-pink-400 text-pink-600 bg-transparent transition-all duration-300 hover:bg-pink-50 focus:outline-none disabled:opacity-50;
+  }
+  .input-flora {
+    @apply w-full rounded-xl border border-pink-200 bg-white px-4 py-3 text-gray-800 placeholder-gray-400 transition-all duration-200 focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20;
+  }
+  .product-card {
+    @apply bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border border-pink-100/60;
+  }
+  .section-container { @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
+  .skeleton { @apply relative overflow-hidden bg-pink-50 rounded-lg; }
+  .flora-badge-sale { @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold bg-red-100 text-red-700; }
+  .flora-badge-new { @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold bg-green-100 text-green-700; }
+  .flora-badge-featured { @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-white; background: linear-gradient(135deg,#fbbf24,#f59e0b); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .text-flora-gradient { background: linear-gradient(135deg,#ec4899,#db2777); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .marquee-track { display: flex; width: max-content; animation: marquee 30s linear infinite; }
+}
