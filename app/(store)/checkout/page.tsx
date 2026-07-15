@@ -598,6 +598,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            
             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400 bg-gray-50 rounded-xl py-2.5">
               🔒 دفع آمن ومشفر بـ SSL
             </div>
