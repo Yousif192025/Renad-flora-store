@@ -98,17 +98,7 @@ export default function CheckoutPage() {
   const currentIdx = STEPS.indexOf(step as typeof STEPS[number]);
 
   // ✅ الحل: تأكد من وجود جميع الحقول المطلوبة
-  const onCustomerSubmit = (data: CustomerForm) => {
-    // تحقق من أن جميع الحقول موجودة
-    const validatedData = {
-      full_name: data.full_name?.trim() || "",
-      email: data.email?.trim() || "",
-      phone: data.phone?.trim() || ""
-    };
-    
-    setCustomerInfo(validatedData);
-    setStep("shipping");
-  };
+ const onCustomerSubmit = (data: CustomerForm) => { setCustomerInfo({ full_name: data.full_name ?? "", email: data.email ?? "", phone: data.phone ?? "" }); setStep("shipping"); };
 
   const onShippingSubmit = (data: ShippingForm) => {
     const country = SHIPPING_COUNTRIES.find((c) => c.code === data.country_code) ?? SHIPPING_COUNTRIES[0];
