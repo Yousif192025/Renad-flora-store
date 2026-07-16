@@ -3,7 +3,7 @@ import type { CheckoutStep, PaymentMethodId, ShippingAddress } from "@/types";
 
 interface CheckoutState {
   step: CheckoutStep;
-  customerInfo: { full_name: string; email: string; phone: string };
+  customerInfo: { full_name: string; email: string; phone: string; [key: string]: string };
   shippingAddress: ShippingAddress;
   shippingFee: number;
   deliveryDays: string;
