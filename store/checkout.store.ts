@@ -1,15 +1,21 @@
 import { create } from "zustand";
 import type { CheckoutStep, PaymentMethodId, ShippingAddress } from "@/types";
 
+interface CustomerInfo {
+  full_name: string;
+  email: string;
+  phone: string;
+}
+
 interface CheckoutState {
   step: CheckoutStep;
-  customerInfo: { full_name: string; email: string; phone: string };
+  customerInfo: CustomerInfo;
   shippingAddress: ShippingAddress;
   shippingFee: number;
   deliveryDays: string;
   paymentMethod: PaymentMethodId | null;
   setStep: (step: CheckoutStep) => void;
-  setCustomerInfo: (info: CheckoutState["customerInfo"]) => void;
+  setCustomerInfo: (info: Partial<CustomerInfo>) => void;
   setShippingAddress: (address: ShippingAddress) => void;
   setShipping: (fee: number, days: string) => void;
   setPaymentMethod: (method: PaymentMethodId) => void;
@@ -19,7 +25,10 @@ interface CheckoutState {
 const initial = {
   step: "customer" as CheckoutStep,
   customerInfo: { full_name: "", email: "", phone: "" },
-  shippingAddress: { full_name: "", phone: "", country_code: "SA", city: "", district: "", street: "", building: "", notes: "" },
+  shippingAddress: {
+    full_name: "", phone: "", country_code: "SA",
+    city: "", district: "", street: "", building: "", notes: "",
+  },
   shippingFee: 0,
   deliveryDays: "2-4",
   paymentMethod: null,
@@ -28,7 +37,9 @@ const initial = {
 export const useCheckoutStore = create<CheckoutState>()((set) => ({
   ...initial,
   setStep: (step) => set({ step }),
-  setCustomerInfo: (customerInfo) => set({ customerInfo }),
+  setCustomerInfo: (info) => set((state) => ({
+    customerInfo: { ...state.customerInfo, ...info }
+  })),
   setShippingAddress: (shippingAddress) => set({ shippingAddress }),
   setShipping: (shippingFee, deliveryDays) => set({ shippingFee, deliveryDays }),
   setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
