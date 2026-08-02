@@ -28,8 +28,8 @@ export const CATEGORIES = [
 ] as const;
 
 export const SHIPPING_COUNTRIES = [
-  { code: "SA", nameAr: "المملكة العربية السعودية", flag: "🇸🇦", shippingFee: 25, freeShippingAt: 300, deliveryDays: "2-4", cities: ["الرياض","جدة","مكة المكرمة","المدينة المنورة","الدمام","الخبر","الطائف","تبوك","أبها","جازان"] },
-  { code: "KW", nameAr: "الكويت",                   flag: "🇰🇼", shippingFee: 35, freeShippingAt: 400, deliveryDays: "3-6", cities: ["الكويت","الفروانية","حولي","الجهراء"] },
+  { code: "SA", nameAr: "المملكة العربية السعودية", flag: "🇸🇦", shippingFee: 25, freeShippingAt: 300, deliveryDays: "2-4", cities: ["الرياض","جدة","مكة المكرمة","المدينة المنورة","الدمام"] },
+  { code: "KW", nameAr: "الكويت",                   flag: "🇰🇼", shippingFee: 35, freeShippingAt: 400, deliveryDays: "3-6", cities: ["الكويت","الفروانية","حولي","العارضية"] },
   { code: "QA", nameAr: "قطر",                      flag: "🇶🇦", shippingFee: 35, freeShippingAt: 400, deliveryDays: "3-6", cities: ["الدوحة","الوكرة","الريان"] },
   { code: "OM", nameAr: "سلطنة عُمان",              flag: "🇴🇲", shippingFee: 40, freeShippingAt: 450, deliveryDays: "4-7", cities: ["مسقط","صلالة","نزوى"] },
   { code: "BH", nameAr: "البحرين",                  flag: "🇧🇭", shippingFee: 35, freeShippingAt: 400, deliveryDays: "3-5", cities: ["المنامة","المحرق","الرفاع"] },
@@ -60,3 +60,6 @@ export const ORDER_STATUSES = {
   cancelled:  { labelAr: "ملغي",         color: "red"    },
   refunded:   { labelAr: "مسترد",        color: "gray"   },
 } as const;
+
+// Reusable type for a shipping country (union of all entries in the SHIPPING_COUNTRIES array)
+export type ShippingCountry = (typeof SHIPPING_COUNTRIES)[number];
