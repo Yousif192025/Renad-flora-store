@@ -63,3 +63,9 @@ export const ORDER_STATUSES = {
 
 // Reusable type for a shipping country (union of all entries in the SHIPPING_COUNTRIES array)
 export type ShippingCountry = (typeof SHIPPING_COUNTRIES)[number];
+
+// Reusable type for a payment method
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+// Reusable type for an installment provider
+export type InstallmentProvider = (typeof INSTALLMENT_PROVIDERS)[number];
