@@ -1,13 +1,13 @@
 export const APP_NAME = "Flora Store";
 export const APP_NAME_AR = "فلورا ستور";
-export const WHATSAPP_NUMBER = "966501234567";
+export const WHATSAPP_NUMBER = "249129352444";
 export const CURRENCY = "SAR";
 export const VAT_RATE = 0.15;
 export const FREE_SHIPPING_THRESHOLD = 300;
 export const PRODUCTS_PER_PAGE = 12;
 
 export const SOCIAL_LINKS = {
-  whatsapp:      "https://wa.me/966501234567",
+  whatsapp:      "https://wa.me/249129352444",
   whatsappGroup: "https://chat.whatsapp.com/DkS6LUMRu12KywzsZUwZ1r",
   instagram:     "https://www.instagram.com/flor.astore123",
   tiktok:        "https://www.tiktok.com/@florastore04",
