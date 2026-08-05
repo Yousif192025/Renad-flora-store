@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProductsGrid } from "@/components/products/products-grid";
+import { CATEGORIES } from "@/lib/constants";
 
 interface CategoryInfo {
   id: string;
@@ -33,13 +34,44 @@ interface Props {
 
 async function getCategory(slug: string): Promise<CategoryInfo | null> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("categories")
-    .select("id, slug, name_ar, name_en, description_ar, emoji, color")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .single();
-  return data as CategoryInfo | null;
+  try {
+    const { data, error } = await supabase
+      .from("categories")
+      .select("id, slug, name_ar, name_en, description_ar, emoji, color")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .single();
+
+    if (data) return data as CategoryInfo;
+
+    // If there was an error or no data, attempt to gracefully fall back to in-repo constants
+    if (error) {
+      // Log server-side for diagnostics (won't expose to client)
+      // eslint-disable-next-line no-console
+      console.error("Supabase error fetching category:", error.message ?? error);
+    }
+
+  } catch (e) {
+    // Query failed (network or misconfig). Log and continue to fallback.
+    // eslint-disable-next-line no-console
+    console.error("Exception while fetching category:", e);
+  }
+
+  // Fallback: match slug against local CATEGORIES constant so route still resolves (prevents 404 when DB is unreachable)
+  const local = CATEGORIES.find((c) => c.slug === slug);
+  if (local) {
+    return {
+      id: local.slug,
+      slug: local.slug,
+      name_ar: (local as any).nameAr ?? local.slug,
+      name_en: (local as any).nameEn ?? local.slug,
+      description_ar: (local as any).description ?? null,
+      emoji: (local as any).emoji ?? null,
+      color: (local as any).color ?? null,
+    } as CategoryInfo;
+  }
+
+  return null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
