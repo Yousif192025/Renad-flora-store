@@ -116,3 +116,4 @@ export function ProductsGrid({ searchParams }: Props) {
     </div>
   );
 }
+
