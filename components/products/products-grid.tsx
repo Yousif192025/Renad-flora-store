@@ -36,7 +36,7 @@ async function getProducts(params: Record<string, string | undefined>): Promise<
       }
     }
 
-    // Build the query - use the nested select for images
+    // Build the query with images
     let query = supabase
       .from("products")
       .select(`
@@ -76,18 +76,27 @@ async function getProducts(params: Record<string, string | undefined>): Promise<
       // Extract images from the nested result
       const images = (item.product_images || []).map((img: any) => ({
         ...img,
-        image_url: img.url, // Map 'url' to 'image_url' for compatibility with ProductCard
+        image_url: img.url, // Map 'url' to 'image_url' for compatibility
       }));
       
       // Find primary image or use the first one
       const primaryImage = images.find((img: any) => img.is_primary === true) || images[0];
       
-      // Return product with images
+      // Get the image URL or use placeholder
+      const imageUrl = primaryImage?.url || null;
+      
+      // Check if the image URL is valid (not empty, not undefined, starts with http)
+      const isValidImage = imageUrl && 
+                          imageUrl.trim() !== '' && 
+                          (imageUrl.startsWith('http') || imageUrl.startsWith('/'));
+      
       return {
         ...item,
         images: images,
-        primary_image: primaryImage?.url || null,
-        image: primaryImage?.url || null, // For backward compatibility
+        primary_image: isValidImage ? imageUrl : null,
+        image: isValidImage ? imageUrl : null,
+        // Add a flag to know if product has images
+        has_images: images.length > 0 && isValidImage,
       };
     }) as unknown as Product[];
 
