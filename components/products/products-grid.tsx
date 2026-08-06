@@ -10,9 +10,7 @@ interface Props {
   searchParams: Record<string, string | undefined>;
 }
 
-interface CategoryRow {
-  id: string;
-}
+// Remove the CategoryRow interface as it's no longer needed
 
 async function getProducts(params: Record<string, string | undefined>): Promise<{ products: Product[]; total: number }> {
   const supabase = createClient();
@@ -20,8 +18,9 @@ async function getProducts(params: Record<string, string | undefined>): Promise<
   // If a category slug is provided, resolve it to the category UUID first
   if (params.category) {
     try {
+      // FIX: Remove the generic type parameter from .from()
       const { data: catData, error: catError } = await supabase
-        .from<CategoryRow>("categories")
+        .from("categories")  // <- Removed <CategoryRow>
         .select("id")
         .eq("slug", params.category)
         .eq("is_active", true)
@@ -50,7 +49,7 @@ async function getProducts(params: Record<string, string | undefined>): Promise<
   }
 
   // Build products query (preserve existing filters)
-  let query: any = supabase
+  let query = supabase
     .from("products")
     .select("*, images:product_images(*)", { count: "exact" })
     .eq("is_active", true);
@@ -92,16 +91,31 @@ async function getProducts(params: Record<string, string | undefined>): Promise<
 }
 
 export function ProductsGrid({ searchParams }: Props) {
-  const { data, isLoading } = useQuery({ queryKey: ["products", searchParams], queryFn: () => getProducts(searchParams) });
+  const { data, isLoading } = useQuery({ 
+    queryKey: ["products", searchParams], 
+    queryFn: () => getProducts(searchParams) 
+  });
+  
   const sortOptions = [
-    { value: "newest", label: "الأحدث" }, { value: "price_asc", label: "السعر: الأقل" },
-    { value: "price_desc", label: "السعر: الأعلى" }, { value: "popular", label: "الأكثر مبيعاً" },
+    { value: "newest", label: "الأحدث" }, 
+    { value: "price_asc", label: "السعر: الأقل" },
+    { value: "price_desc", label: "السعر: الأعلى" }, 
+    { value: "popular", label: "الأكثر مبيعاً" },
   ];
+  
   return (
     <div>
       <div className="flex items-center justify-between mb-5 gap-4 flex-wrap">
         <p className="text-sm text-gray-500">{isLoading ? "..." : `${data?.total ?? 0} منتج`}</p>
-        <select className="input-flora w-auto text-sm py-2 px-3" defaultValue={searchParams.sort ?? "newest"} onChange={(e) => { const url = new URL(window.location.href); url.searchParams.set("so", e.target.value); window.location.href = url.toString(); }}>
+        <select 
+          className="input-flora w-auto text-sm py-2 px-3" 
+          defaultValue={searchParams.sort ?? "newest"} 
+          onChange={(e) => { 
+            const url = new URL(window.location.href); 
+            url.searchParams.set("so", e.target.value); 
+            window.location.href = url.toString(); 
+          }}
+        >
           {sortOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
@@ -116,4 +130,3 @@ export function ProductsGrid({ searchParams }: Props) {
     </div>
   );
 }
-
