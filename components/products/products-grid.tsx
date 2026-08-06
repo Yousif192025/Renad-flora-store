@@ -36,10 +36,13 @@ async function getProducts(params: Record<string, string | undefined>): Promise<
       }
     }
 
-    // Build the query
+    // Build the query - use the nested select for images
     let query = supabase
       .from("products")
-      .select("*", { count: "exact" })
+      .select(`
+        *,
+        product_images (*)
+      `, { count: "exact" })
       .eq("is_active", true);
 
     if (params.category) query = query.eq("category_id", params.category);
@@ -68,93 +71,28 @@ async function getProducts(params: Record<string, string | undefined>): Promise<
       return { products: [], total: 0 };
     }
 
-    // If we have products, try to fetch their images
-    let productsWithImages: Product[] = (data ?? []) as unknown as Product[];
-    
-    if (data && data.length > 0) {
-      try {
-        const productIds = data.map((p: any) => p.id);
-        
-        // Try different possible column names for the foreign key
-        // First try: product_id
-        let imagesData: any[] = [];
-        let imagesError: any = null;
-        
-        // Check if product_images table exists and has data
-        const { data: testData, error: testError } = await supabase
-          .from("product_images")
-          .select("*")
-          .limit(1);
-        
-        if (testError) {
-          console.warn("product_images table might not exist or is inaccessible:", testError);
-        } else {
-          // Check what column names exist
-          const sampleRow = testData?.[0];
-          const possibleColumns = ['product_id', 'productId', 'product_uuid', 'product'];
-          
-          let foundColumn = null;
-          if (sampleRow) {
-            for (const col of possibleColumns) {
-              if (sampleRow[col] !== undefined) {
-                foundColumn = col;
-                break;
-              }
-            }
-          }
-          
-          if (foundColumn) {
-            // Use the found column name
-            const { data: images, error: err } = await supabase
-              .from("product_images")
-              .select("*")
-              .in(foundColumn, productIds);
-            
-            imagesData = images || [];
-            imagesError = err;
-          } else {
-            // Try the most common column name
-            const { data: images, error: err } = await supabase
-              .from("product_images")
-              .select("*")
-              .in("product_id", productIds);
-            
-            imagesData = images || [];
-            imagesError = err;
-          }
-        }
-
-        if (!imagesError && imagesData.length > 0) {
-          // Group images by product_id (or the correct column name)
-          const imagesByProduct = imagesData.reduce((acc: any, img: any) => {
-            // Find which column has the product ID
-            const productIdKey = ['product_id', 'productId', 'product_uuid', 'product'].find(key => img[key] !== undefined);
-            const productId = productIdKey ? img[productIdKey] : img.product_id;
-            
-            if (productId) {
-              if (!acc[productId]) acc[productId] = [];
-              acc[productId].push(img);
-            }
-            return acc;
-          }, {});
-
-          // Attach images to products
-          productsWithImages = (data as any[]).map((product) => ({
-            ...product,
-            images: imagesByProduct[product.id] || [],
-          })) as unknown as Product[];
-        } else {
-          // No images found, just return products without images
-          console.log("No images found for products");
-        }
-      } catch (imgError) {
-        console.warn("Error fetching images (continuing without images):", imgError);
-        // Continue without images
-      }
-    }
+    // Transform the data to match the Product type with correct image URL field
+    const products = (data ?? []).map((item: any) => {
+      // Extract images from the nested result
+      const images = (item.product_images || []).map((img: any) => ({
+        ...img,
+        image_url: img.url, // Map 'url' to 'image_url' for compatibility with ProductCard
+      }));
+      
+      // Find primary image or use the first one
+      const primaryImage = images.find((img: any) => img.is_primary === true) || images[0];
+      
+      // Return product with images
+      return {
+        ...item,
+        images: images,
+        primary_image: primaryImage?.url || null,
+        image: primaryImage?.url || null, // For backward compatibility
+      };
+    }) as unknown as Product[];
 
     return { 
-      products: productsWithImages, 
+      products, 
       total: count ?? 0 
     };
     
