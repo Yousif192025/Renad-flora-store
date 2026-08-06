@@ -17,26 +17,18 @@ async function getProducts(params: Record<string, string | undefined>): Promise<
     // If a category slug is provided, resolve it to the category UUID first
     if (params.category) {
       try {
-        // Use a simpler query without the .maybeSingle() for now
         const { data: catData, error: catError } = await supabase
           .from("categories")
           .select("id")
           .eq("slug", params.category)
           .eq("is_active", true)
-          .limit(1)
-          .single();
+          .maybeSingle();
 
-        if (catError) {
+        if (catError || !catData) {
           console.error("Category resolution error:", catError);
-          // If category resolution fails, return empty results
           return { products: [], total: 0 };
         }
 
-        if (!catData) {
-          return { products: [], total: 0 };
-        }
-
-        // Replace the category param (slug) with the resolved UUID
         params = { ...params, category: catData.id };
       } catch (e) {
         console.error("Exception resolving category:", e);
@@ -44,93 +36,105 @@ async function getProducts(params: Record<string, string | undefined>): Promise<
       }
     }
 
-    // Start building the query
+    // Build the query
     let query = supabase
       .from("products")
       .select("*", { count: "exact" })
       .eq("is_active", true);
 
-    // Add filters
-    if (params.category) {
-      query = query.eq("category_id", params.category);
-    }
-    
-    if (params.filter === "sale") {
-      query = query.eq("is_on_sale", true);
-    }
-    
-    if (params.filter === "featured") {
-      query = query.eq("is_featured", true);
-    }
-    
-    if (params.filter === "new") {
-      query = query.eq("is_new", true);
-    }
-    
-    if (params.min) {
-      query = query.gte("price", Number(params.min));
-    }
-    
-    if (params.max) {
-      query = query.lte("price", Number(params.max));
-    }
-    
-    if (params.search) {
-      query = query.ilike("name_ar", `%${params.search}%`);
-    }
+    if (params.category) query = query.eq("category_id", params.category);
+    if (params.filter === "sale") query = query.eq("is_on_sale", true);
+    if (params.filter === "featured") query = query.eq("is_featured", true);
+    if (params.filter === "new") query = query.eq("is_new", true);
+    if (params.min) query = query.gte("price", Number(params.min));
+    if (params.max) query = query.lte("price", Number(params.max));
+    if (params.search) query = query.ilike("name_ar", `%${params.search}%`);
 
-    // Add sorting
     switch (params.sort) {
-      case "price_asc":
-        query = query.order("price", { ascending: true });
-        break;
-      case "price_desc":
-        query = query.order("price", { ascending: false });
-        break;
-      case "popular":
-        query = query.order("rating_count", { ascending: false });
-        break;
-      default:
-        query = query.order("created_at", { ascending: false });
+      case "price_asc": query = query.order("price", { ascending: true }); break;
+      case "price_desc": query = query.order("price", { ascending: false }); break;
+      case "popular": query = query.order("rating_count", { ascending: false }); break;
+      default: query = query.order("created_at", { ascending: false });
     }
 
-    // Add pagination
     const page = Number(params.page ?? 1);
     const limit = PRODUCTS_PER_PAGE;
     query = query.range((page - 1) * limit, page * limit - 1);
 
-    // Execute the query
     const { data, count, error } = await query;
 
     if (error) {
-      console.error("Products query error:", {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-      });
+      console.error("Products query error:", error);
       return { products: [], total: 0 };
     }
 
-    // If we have products, fetch their images separately
+    // If we have products, try to fetch their images
     let productsWithImages: Product[] = (data ?? []) as unknown as Product[];
     
     if (data && data.length > 0) {
       try {
         const productIds = data.map((p: any) => p.id);
-        const { data: images, error: imagesError } = await supabase
+        
+        // Try different possible column names for the foreign key
+        // First try: product_id
+        let imagesData: any[] = [];
+        let imagesError: any = null;
+        
+        // Check if product_images table exists and has data
+        const { data: testData, error: testError } = await supabase
           .from("product_images")
           .select("*")
-          .in("product_id", productIds)
-          .order("display_order", { ascending: true });
-
-        if (!imagesError && images) {
-          // Group images by product_id
-          const imagesByProduct = images.reduce((acc: any, img: any) => {
-            if (!acc[img.product_id]) {
-              acc[img.product_id] = [];
+          .limit(1);
+        
+        if (testError) {
+          console.warn("product_images table might not exist or is inaccessible:", testError);
+        } else {
+          // Check what column names exist
+          const sampleRow = testData?.[0];
+          const possibleColumns = ['product_id', 'productId', 'product_uuid', 'product'];
+          
+          let foundColumn = null;
+          if (sampleRow) {
+            for (const col of possibleColumns) {
+              if (sampleRow[col] !== undefined) {
+                foundColumn = col;
+                break;
+              }
             }
-            acc[img.product_id].push(img);
+          }
+          
+          if (foundColumn) {
+            // Use the found column name
+            const { data: images, error: err } = await supabase
+              .from("product_images")
+              .select("*")
+              .in(foundColumn, productIds);
+            
+            imagesData = images || [];
+            imagesError = err;
+          } else {
+            // Try the most common column name
+            const { data: images, error: err } = await supabase
+              .from("product_images")
+              .select("*")
+              .in("product_id", productIds);
+            
+            imagesData = images || [];
+            imagesError = err;
+          }
+        }
+
+        if (!imagesError && imagesData.length > 0) {
+          // Group images by product_id (or the correct column name)
+          const imagesByProduct = imagesData.reduce((acc: any, img: any) => {
+            // Find which column has the product ID
+            const productIdKey = ['product_id', 'productId', 'product_uuid', 'product'].find(key => img[key] !== undefined);
+            const productId = productIdKey ? img[productIdKey] : img.product_id;
+            
+            if (productId) {
+              if (!acc[productId]) acc[productId] = [];
+              acc[productId].push(img);
+            }
             return acc;
           }, {});
 
@@ -139,9 +143,12 @@ async function getProducts(params: Record<string, string | undefined>): Promise<
             ...product,
             images: imagesByProduct[product.id] || [],
           })) as unknown as Product[];
+        } else {
+          // No images found, just return products without images
+          console.log("No images found for products");
         }
       } catch (imgError) {
-        console.error("Error fetching images:", imgError);
+        console.warn("Error fetching images (continuing without images):", imgError);
         // Continue without images
       }
     }
@@ -171,7 +178,6 @@ export function ProductsGrid({ searchParams }: Props) {
     { value: "popular", label: "الأكثر مبيعاً" },
   ];
 
-  // Handle error state
   if (error) {
     console.error("ProductsGrid error:", error);
     return (
