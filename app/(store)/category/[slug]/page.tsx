@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProductsGrid } from "@/components/products/products-grid";
-import { CATEGORIES } from "@/lib/constants";
 
 interface CategoryInfo {
   id: string;
@@ -33,86 +32,60 @@ interface Props {
 }
 
 async function getCategory(slug: string): Promise<CategoryInfo | null> {
-  const supabase = await createClient();
   try {
-    const { data, error } = await supabase
+    const supabase = await createClient();
+    const { data } = await supabase
       .from("categories")
       .select("id, slug, name_ar, name_en, description_ar, emoji, color")
       .eq("slug", slug)
       .eq("is_active", true)
       .single();
 
-    if (data) return data as CategoryInfo;
-
-    // If there was an error or no data, attempt to gracefully fall back to in-repo constants
-    if (error) {
-      // Log server-side for diagnostics (won't expose to client)
-      // eslint-disable-next-line no-console
-      console.error("Supabase error fetching category:", error.message ?? error);
-    }
-
-  } catch (e) {
-    // Query failed (network or misconfig). Log and continue to fallback.
-    // eslint-disable-next-line no-console
-    console.error("Exception while fetching category:", e);
+    return data as CategoryInfo | null;
+  } catch {
+    return null;
   }
-
-  // Fallback: match slug against local CATEGORIES constant so route still resolves (prevents 404 when DB is unreachable)
-  const local = CATEGORIES.find((c) => c.slug === slug);
-  if (local) {
-    return {
-      id: local.slug,
-      slug: local.slug,
-      name_ar: (local as any).nameAr ?? local.slug,
-      name_en: (local as any).nameEn ?? local.slug,
-      description_ar: (local as any).description ?? null,
-      emoji: (local as any).emoji ?? null,
-      color: (local as any).color ?? null,
-    } as CategoryInfo;
-  }
-
-  return null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const meta = CATEGORIES_META[slug];
   const category = await getCategory(slug);
-  if (!category) return { title: "التصنيف غير موجود" };
+  const name = category?.name_ar ?? slug;
   return {
-    title: `${category.name_ar} | فلورا ستور`,
-    description: category.description_ar ?? `تسوقي من ${category.name_ar} في فلورا ستور`,
+    title: `${name} | فلورا ستور`,
+    description: category?.description_ar ?? meta?.description ?? `تسوقي من ${name} في فلورا ستور`,
   };
 }
 
 export default async function CategoryPage({ params }: Props) {
   const { slug } = await params;
+
+  // Check slug is known
+  const meta = CATEGORIES_META[slug];
+  if (!meta) notFound();
+
+  // Try to get full info from DB (for name_ar)
   const category = await getCategory(slug);
 
-  if (!category) notFound();
-
-  const meta = CATEGORIES_META[slug] ?? {
-    emoji:       category.emoji ?? "🌸",
-    color:       category.color ?? "#fdf2f8",
-    description: category.description_ar ?? "",
-  };
+  const displayName = category?.name_ar ?? slug;
+  const displayDesc = category?.description_ar ?? meta.description;
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero */}
       <div
         className="py-14 text-center"
-        style={{
-          background: `linear-gradient(135deg, ${meta.color}99, ${meta.color}55)`,
-        }}
+        style={{ background: `linear-gradient(135deg, ${meta.color}99, ${meta.color}55)` }}
       >
         <div className="text-6xl mb-3">{meta.emoji}</div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">{category.name_ar}</h1>
-        {meta.description && (
-          <p className="text-gray-600 text-base max-w-md mx-auto">{meta.description}</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{displayName}</h1>
+        {displayDesc && (
+          <p className="text-gray-600 text-base max-w-md mx-auto">{displayDesc}</p>
         )}
       </div>
 
-      {/* Products */}
+      {/* Products — pass slug so ProductsGrid resolves to UUID internally */}
       <div className="section-container py-10">
         <Suspense
           fallback={
@@ -129,7 +102,7 @@ export default async function CategoryPage({ params }: Props) {
             </div>
           }
         >
-          <ProductsGrid searchParams={{ category: category.id }} />
+          <ProductsGrid searchParams={{ category: slug }} />
         </Suspense>
       </div>
     </div>
